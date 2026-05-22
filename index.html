@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="es" class="h-full w-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rosco de Pasapalabra</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap');
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+    }
+
+    body {
+      overflow: hidden;
+    }
+
+    .app-shell {
+      height: 100%;
+      width: 100%;
+      overflow: auto;
+      position: relative;
+    }
+
+    .sparkle-grid {
+      background-image:
+        radial-gradient(circle at 16% 22%, rgba(255,255,255,0.22) 0 2px, transparent 3px),
+        radial-gradient(circle at 82% 18%, rgba(255,255,255,0.16) 0 2px, transparent 3px),
+        radial-gradient(circle at 65% 78%, rgba(255,255,255,0.18) 0 2px, transparent 3px),
+        linear-gradient(135deg, rgba(255,255,255,0.12), transparent 28%, rgba(255,255,255,0.08));
+      background-size: 160px 160px, 210px 210px, 190px 190px, 100% 100%;
+    }
+
+    .rosco-wrap {
+      position: relative;
+      width: min(48%, 520px);
+      aspect-ratio: 1 / 1;
+      min-width: 330px;
+    }
+
+    .letter-bubble {
+      position: absolute;
+      width: 46px;
+      height: 46px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: white;
+      border: 3px solid rgba(255,255,255,0.9);
+      box-shadow: 0 10px 18px rgba(0,0,0,0.18), inset 0 2px 0 rgba(255,255,255,0.35);
+      transform: translate(-50%, -50%);
+      transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+      user-select: none;
+    }
+
+    .letter-bubble.current {
+      transform: translate(-50%, -50%) scale(1.22);
+      box-shadow: 0 0 0 7px rgba(255,255,255,0.28), 0 18px 28px rgba(0,0,0,0.24), inset 0 2px 0 rgba(255,255,255,0.4);
+      z-index: 3;
+    }
+
+    .letter-bubble.correct {
+      background: #16a34a !important;
+    }
+
+    .letter-bubble.wrong {
+      background: #dc2626 !important;
+    }
+
+    .letter-bubble.passed {
+      background: #f59e0b !important;
+    }
+
+    .letter-bubble.pending {
+      background: #2563eb;
+    }
+
+    .letter-bubble.active-pulse {
+      animation: pulsePop 1.1s ease-in-out infinite;
+    }
+
+    @keyframes pulsePop {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.22); }
+    }
+
+    .center-orb {
+      position: absolute;
+      inset: 22%;
+      border-radius: 999px;
+      background:
+        radial-gradient(circle at 35% 25%, rgba(255,255,255,0.92), rgba(255,255,255,0.38) 20%, transparent 45%),
+        linear-gradient(135deg, rgba(255,255,255,0.22), rgba(255,255,255,0.06));
+      border: 2px solid rgba(255,255,255,0.35);
+      box-shadow: inset 0 0 35px rgba(255,255,255,0.18), 0 22px 50px rgba(0,0,0,0.16);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 30px;
+    }
+
+    .answer-input {
+      outline: none;
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .answer-input:focus {
+      box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.45);
+      transform: translateY(-1px);
+    }
+
+    .action-button {
+      transition: transform 0.18s ease, filter 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .action-button:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.04);
+    }
+
+    .action-button:active {
+      transform: translateY(0);
+    }
+
+    .fade-in {
+      animation: fadeIn 0.55s ease both;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .shake {
+      animation: shake 0.28s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
+
+    @media (max-width: 900px) {
+      .game-layout {
+        flex-direction: column;
+      }
+
+      .rosco-wrap {
+        width: min(88%, 430px);
+        min-width: 285px;
+      }
+
+      .letter-bubble {
+        width: 38px;
+        height: 38px;
+        font-size: 0.92rem;
+      }
+
+      .center-orb {
+        inset: 25%;
+        padding: 18px;
+      }
+    }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="https://cdn.tailwindcss.com/3.4.17" type="text/javascript"></script>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full w-full">
+  <div id="app" class="app-shell sparkle-grid">
+   <header class="w-full px-5 pt-5 md:px-8 md:pt-7">
+    <div class="mx-auto max-w-7xl flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+     <div>
+      <p id="subtitle" class="font-bold uppercase tracking-[0.24em] opacity-85">Ciencias naturales</p>
+      <h1 id="title" class="font-black leading-tight">Rosco de Pasapalabra</h1>
+     </div>
+     <div class="flex flex-wrap items-center gap-3">
+      <div class="rounded-2xl px-4 py-3 shadow-lg border border-white/25 bg-white/18 backdrop-blur-md">
+       <p class="text-xs font-bold uppercase tracking-widest opacity-75">Aciertos</p>
+       <p id="scoreText" class="font-black text-2xl">0 / 27</p>
+      </div>
+      <div class="rounded-2xl px-4 py-3 shadow-lg border border-white/25 bg-white/18 backdrop-blur-md">
+       <p class="text-xs font-bold uppercase tracking-widest opacity-75">Pendientes</p>
+       <p id="pendingText" class="font-black text-2xl">27</p>
+      </div>
+     </div>
+    </div>
+   </header>
+   <main class="w-full px-5 pb-6 pt-4 md:px-8 md:pb-8">
+    <div class="mx-auto max-w-7xl game-layout flex items-center justify-center gap-6 lg:gap-10">
+     <section class="rosco-wrap fade-in" aria-label="Rosco de letras">
+      <div id="lettersRing" aria-hidden="true"></div>
+      <div class="center-orb">
+       <div>
+        <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white/75 shadow-xl"><i data-lucide="leaf" class="text-emerald-700" style="width: 30px; height: 30px;"></i>
+        </div>
+        <p class="font-black text-white drop-shadow-md">Bio · Geo · Eco</p>
+        <p class="text-white/85 font-bold">Responde letra a letra</p>
+       </div>
+      </div>
+     </section>
+     <section class="w-full max-w-xl fade-in" style="animation-delay: 0.12s;" aria-label="Panel de juego">
+      <div class="rounded-[2rem] border border-white/30 bg-white/90 p-5 md:p-7 shadow-2xl backdrop-blur-md">
+       <div id="introPanel">
+        <div class="mb-5 inline-flex items-center gap-2 rounded-full px-4 py-2 font-extrabold text-sm bg-amber-100 text-amber-800"><i data-lucide="sparkles" style="width: 18px; height: 18px;"></i> Juego listo
+        </div>
+        <h2 id="introTitle" class="font-black text-slate-900 mb-3">¿Preparado para completar el rosco?</h2>
+        <p id="introText" class="text-slate-700 font-bold leading-relaxed">Lee cada pista, escribe la respuesta y avanza hasta completar todas las letras. Puedes usar “Pasapalabra” para dejar una letra pendiente.</p><button id="startBtn" class="action-button mt-6 w-full rounded-2xl px-6 py-4 font-black text-white shadow-xl focus:outline-none focus:ring-4 focus:ring-amber-300"> Empezar rosco </button>
+       </div>
+       <div id="gamePanel" class="hidden">
+        <div class="flex items-start justify-between gap-4 mb-5">
+         <div>
+          <p id="typeLabel" class="font-black uppercase tracking-[0.18em] text-sm">Empieza por</p>
+          <div class="flex items-center gap-3 mt-2">
+           <div id="currentLetterBadge" class="flex h-16 w-16 items-center justify-center rounded-full text-white font-black text-3xl shadow-lg">
+            A
+           </div>
+           <h2 id="letterTitle" class="font-black text-slate-900">Letra A</h2>
+          </div>
+         </div>
+         <div id="progressPill" class="rounded-full px-4 py-2 font-black text-sm bg-slate-100 text-slate-700">
+          1 / 27
+         </div>
+        </div>
+        <div class="rounded-3xl bg-slate-100 p-5 border border-slate-200">
+         <p class="text-xs font-black uppercase tracking-widest text-slate-500 mb-2">Pista</p>
+         <p id="clueText" class="font-extrabold text-slate-900 leading-snug">Capa gaseosa que rodea la Tierra.</p>
+        </div>
+        <form id="answerForm" class="mt-5"><label for="answerInput" class="block font-black text-slate-700 mb-2">Tu respuesta</label> <input id="answerInput" class="answer-input w-full rounded-2xl border-2 border-slate-200 bg-white px-5 py-4 font-extrabold text-slate-900" type="text" autocomplete="off" placeholder="Escribe aquí...">
+         <div id="feedback" class="mt-3 min-h-[28px] font-black"></div>
+         <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3"><button id="checkBtn" type="submit" class="action-button rounded-2xl px-5 py-4 font-black text-white shadow-lg focus:outline-none focus:ring-4 focus:ring-emerald-200"> Comprobar </button> <button id="passBtn" type="button" class="action-button rounded-2xl px-5 py-4 font-black text-white shadow-lg focus:outline-none focus:ring-4 focus:ring-yellow-200"> Pasapalabra </button>
+         </div>
+        </form>
+       </div>
+       <div id="endPanel" class="hidden text-center">
+        <div class="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100"><i data-lucide="trophy" class="text-emerald-700" style="width: 42px; height: 42px;"></i>
+        </div>
+        <h2 class="font-black text-slate-900 mb-2">¡Rosco terminado!</h2>
+        <p id="finalText" class="font-extrabold text-slate-700 mb-5">Has conseguido 0 aciertos.</p>
+        <div class="grid grid-cols-3 gap-3 mb-5">
+         <div class="rounded-2xl bg-emerald-50 p-3">
+          <p class="text-xs font-black uppercase text-emerald-700">Bien</p>
+          <p id="finalCorrect" class="text-2xl font-black text-emerald-700">0</p>
+         </div>
+         <div class="rounded-2xl bg-red-50 p-3">
+          <p class="text-xs font-black uppercase text-red-700">Mal</p>
+          <p id="finalWrong" class="text-2xl font-black text-red-700">0</p>
+         </div>
+         <div class="rounded-2xl bg-amber-50 p-3">
+          <p class="text-xs font-black uppercase text-amber-700">Pasadas</p>
+          <p id="finalPassed" class="text-2xl font-black text-amber-700">0</p>
+         </div>
+        </div><button id="restartBtn" class="action-button w-full rounded-2xl px-6 py-4 font-black text-white shadow-xl focus:outline-none focus:ring-4 focus:ring-sky-200"> Reiniciar </button>
+       </div>
+      </div>
+      <aside class="mt-4 rounded-3xl border border-white/25 bg-white/20 p-4 backdrop-blur-md shadow-lg">
+       <h2 class="sr-only">Leyenda</h2>
+       <div class="flex flex-wrap gap-3 text-sm font-black"><span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-blue-600"></span> Pendiente</span> <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-green-600"></span> Correcta</span> <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-red-600"></span> Incorrecta</span> <span class="inline-flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-amber-500"></span> Pasada</span>
+       </div>
+      </aside>
+     </section>
+    </div>
+   </main>
+   <footer class="w-full px-5 pb-4 text-center font-bold opacity-80">
+    Completa el rosco sin tildes si quieres: el juego acepta ambas formas.
+   </footer>
+  </div>
+  <script>
+    const defaultConfig = {
+      background_color: "#0f766e",
+      surface_color: "#ffffff",
+      text_color: "#0f172a",
+      primary_action_color: "#2563eb",
+      secondary_action_color: "#f59e0b",
+      font_family: "Fredoka",
+      font_size: 16,
+      game_title: "Rosco de Pasapalabra",
+      game_subtitle: "Ciencias naturales",
+      start_button_text: "Empezar rosco",
+      check_button_text: "Comprobar",
+      pass_button_text: "Pasapalabra",
+      restart_button_text: "Reiniciar"
+    };
+
+    const questions = [
+      { letter: "A", type: "starts", clue: "Capa gaseosa que rodea la Tierra.", answer: "atmósfera" },
+      { letter: "B", type: "starts", clue: "Conjunto de todos los seres vivos de la Tierra.", answer: "biosfera" },
+      { letter: "C", type: "starts", clue: "Relación alimentaria que muestra quién se come a quién.", answer: "cadena trófica" },
+      { letter: "D", type: "starts", clue: "Conjunto de todos los seres vivos del planeta.", answer: "diversidad" },
+      { letter: "E", type: "starts", clue: "Conjunto formado por biotopo, biocenosis y sus relaciones.", answer: "ecosistema" },
+      { letter: "F", type: "starts", clue: "Proceso por el que las plantas fabrican su alimento usando luz solar.", answer: "fotosíntesis" },
+      { letter: "G", type: "starts", clue: "Capa sólida de la Tierra formada por rocas y minerales.", answer: "geosfera" },
+      { letter: "H", type: "starts", clue: "Conjunto de toda el agua del planeta.", answer: "hidrosfera" },
+      { letter: "I", type: "starts", clue: "Relación entre seres vivos de distintas especies.", answer: "interespecífica" },
+      { letter: "J", type: "starts", clue: "Hábito saludable.", answer: "jugar al aire libre" },
+      { letter: "K", type: "starts", clue: "Unidad usada para medir temperatura absoluta.", answer: "kelvin" },
+      { letter: "L", type: "starts", clue: "Energía necesaria para la fotosíntesis.", answer: "luz" },
+      { letter: "M", type: "starts", clue: "Organismo que se alimenta de materia orgánica en descomposición.", answer: "microorganismo" },
+      { letter: "N", type: "starts", clue: "Nivel que ocupa un organismo en una cadena alimentaria.", answer: "nivel trófico" },
+      { letter: "Ñ", type: "contains", clue: "Contiene la Ñ: etapa de los ríos donde predomina la erosión.", answer: "montaña" },
+      { letter: "O", type: "starts", clue: "Gas producido por las plantas durante la fotosíntesis.", answer: "oxígeno" },
+      { letter: "P", type: "starts", clue: "Conjunto de individuos de la misma especie que vive en un lugar.", answer: "población" },
+      { letter: "Q", type: "starts", clue: "Proceso por el cual se liberan gases a la atmósfera.", answer: "quemar" },
+      { letter: "R", type: "starts", clue: "Conjunto de cadenas tróficas conectadas entre sí.", answer: "red trófica" },
+      { letter: "S", type: "starts", clue: "Capa superficial de la geosfera donde crecen plantas.", answer: "suelo" },
+      { letter: "T", type: "starts", clue: "Movimiento de las plantas.", answer: "tropismo" },
+      { letter: "U", type: "contains", clue: "Contiene la U: organismo que produce su propio alimento.", answer: "autótrofo" },
+      { letter: "V", type: "starts", clue: "Ser vivo cuyo desarrollo embrionario ocurre en el interior de la madre.", answer: "vivíparo" },
+      { letter: "W", type: "contains", clue: "Contiene la W: unidad de potencia usada en física.", answer: "watio" },
+      { letter: "X", type: "contains", clue: "Contiene la X: capa más externa de la atmósfera.", answer: "exosfera" },
+      { letter: "Y", type: "contains", clue: "Contiene la Y: en las relaciones de mutualismo ambos organismos se.", answer: "ayudan" },
+      { letter: "Z", type: "contains", clue: "Contiene la Z: gas de la atmósfera que nos protege de radiación ultravioleta.", answer: "ozono" }
+    ];
+
+    let currentIndex = 0;
+    let gameStarted = false;
+    let statuses = questions.map(() => "pending");
+    let lastFeedbackTimer = null;
+
+    const app = document.getElementById("app");
+    const lettersRing = document.getElementById("lettersRing");
+    const introPanel = document.getElementById("introPanel");
+    const gamePanel = document.getElementById("gamePanel");
+    const endPanel = document.getElementById("endPanel");
+    const startBtn = document.getElementById("startBtn");
+    const restartBtn = document.getElementById("restartBtn");
+    const answerForm = document.getElementById("answerForm");
+    const answerInput = document.getElementById("answerInput");
+    const passBtn = document.getElementById("passBtn");
+    const checkBtn = document.getElementById("checkBtn");
+    const feedback = document.getElementById("feedback");
+
+    function normalizeAnswer(value) {
+      return value
+        .toLowerCase()
+        .trim()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ");
+    }
+
+    function createRosco() {
+      lettersRing.innerHTML = "";
+      const total = questions.length;
+      const radius = 44;
+      questions.forEach((question, index) => {
+        const angle = (index / total) * Math.PI * 2 - Math.PI / 2;
+        const x = 50 + radius * Math.cos(angle);
+        const y = 50 + radius * Math.sin(angle);
+        const bubble = document.createElement("div");
+        bubble.className = "letter-bubble pending";
+        bubble.textContent = question.letter;
+        bubble.dataset.index = String(index);
+        bubble.style.left = x + "%";
+        bubble.style.top = y + "%";
+        lettersRing.appendChild(bubble);
+      });
+    }
+
+    function updateRosco() {
+      [...lettersRing.children].forEach((bubble, index) => {
+        bubble.classList.remove("pending", "correct", "wrong", "passed", "current", "active-pulse");
+        bubble.classList.add(statuses[index]);
+        if (gameStarted && index === currentIndex && statuses[index] === "pending") {
+          bubble.classList.add("current", "active-pulse");
+        }
+      });
+    }
+
+    function updateStats() {
+      const correct = statuses.filter(s => s === "correct").length;
+      const wrong = statuses.filter(s => s === "wrong").length;
+      const passed = statuses.filter(s => s === "passed").length;
+      const pending = statuses.filter(s => s === "pending").length + passed;
+
+      document.getElementById("scoreText").textContent = correct + " / " + questions.length;
+      document.getElementById("pendingText").textContent = pending;
+      document.getElementById("finalCorrect").textContent = correct;
+      document.getElementById("finalWrong").textContent = wrong;
+      document.getElementById("finalPassed").textContent = passed;
+      document.getElementById("finalText").textContent = "Has conseguido " + correct + " aciertos de " + questions.length + ".";
+    }
+
+    function findNextIndex(fromIndex) {
+      for (let step = 1; step <= questions.length; step++) {
+        const next = (fromIndex + step) % questions.length;
+        if (statuses[next] === "pending" || statuses[next] === "passed") {
+          return next;
+        }
+      }
+      return -1;
+    }
+
+    function showQuestion() {
+      const question = questions[currentIndex];
+      statuses[currentIndex] = statuses[currentIndex] === "passed" ? "pending" : statuses[currentIndex];
+
+      document.getElementById("currentLetterBadge").textContent = question.letter;
+      document.getElementById("letterTitle").textContent = "Letra " + question.letter;
+      document.getElementById("typeLabel").textContent = question.type === "starts" ? "Empieza por" : "Contiene";
+      document.getElementById("clueText").textContent = question.clue;
+      document.getElementById("progressPill").textContent = (currentIndex + 1) + " / " + questions.length;
+
+      answerInput.value = "";
+      feedback.textContent = "";
+      feedback.className = "mt-3 min-h-[28px] font-black";
+      answerInput.focus();
+      updateRosco();
+      updateStats();
+    }
+
+    function showFeedback(text, kind) {
+      if (lastFeedbackTimer) clearTimeout(lastFeedbackTimer);
+      feedback.textContent = text;
+      feedback.className = "mt-3 min-h-[28px] font-black " + (kind === "ok" ? "text-emerald-700" : kind === "bad" ? "text-red-700" : "text-amber-700");
+    }
+
+    function advanceOrEnd() {
+      const next = findNextIndex(currentIndex);
+      if (next === -1) {
+        endGame();
+        return;
+      }
+      currentIndex = next;
+      showQuestion();
+    }
+
+    function startGame() {
+      gameStarted = true;
+      currentIndex = 0;
+      statuses = questions.map(() => "pending");
+      introPanel.classList.add("hidden");
+      endPanel.classList.add("hidden");
+      gamePanel.classList.remove("hidden");
+      showQuestion();
+    }
+
+    function endGame() {
+      gameStarted = false;
+      gamePanel.classList.add("hidden");
+      introPanel.classList.add("hidden");
+      endPanel.classList.remove("hidden");
+      updateRosco();
+      updateStats();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function checkAnswer(event) {
+      event.preventDefault();
+      if (!gameStarted) return;
+
+      const userAnswer = normalizeAnswer(answerInput.value);
+      const rightAnswer = normalizeAnswer(questions[currentIndex].answer);
+
+      if (!userAnswer) {
+        showFeedback("Escribe una respuesta o pulsa Pasapalabra.", "warn");
+        answerInput.classList.add("shake");
+        setTimeout(() => answerInput.classList.remove("shake"), 300);
+        return;
+      }
+
+      if (userAnswer === rightAnswer) {
+        statuses[currentIndex] = "correct";
+        showFeedback("¡Correcto!", "ok");
+      } else {
+        statuses[currentIndex] = "wrong";
+        showFeedback("No era esa. Respuesta: " + questions[currentIndex].answer, "bad");
+      }
+
+      updateRosco();
+      updateStats();
+      setTimeout(advanceOrEnd, 720);
+    }
+
+    function passQuestion() {
+      if (!gameStarted) return;
+      statuses[currentIndex] = "passed";
+      showFeedback("La dejamos para después.", "warn");
+      updateRosco();
+      updateStats();
+      setTimeout(advanceOrEnd, 420);
+    }
+
+    function applyConfig(config) {
+      const backgroundColor = config.background_color || defaultConfig.background_color;
+      const surfaceColor = config.surface_color || defaultConfig.surface_color;
+      const textColor = config.text_color || defaultConfig.text_color;
+      const primaryActionColor = config.primary_action_color || defaultConfig.primary_action_color;
+      const secondaryActionColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+      const fontFamily = config.font_family || defaultConfig.font_family;
+      const baseSize = Number(config.font_size || defaultConfig.font_size);
+      const fontStack = `${fontFamily}, Nunito, sans-serif`;
+
+      app.style.background = `radial-gradient(circle at 20% 15%, rgba(250,204,21,0.40), transparent 28%), radial-gradient(circle at 80% 30%, rgba(37,99,235,0.32), transparent 30%), linear-gradient(135deg, ${backgroundColor}, #064e3b)`;
+      app.style.color = textColor;
+      app.style.fontFamily = fontStack;
+
+      document.getElementById("title").textContent = config.game_title || defaultConfig.game_title;
+      document.getElementById("subtitle").textContent = config.game_subtitle || defaultConfig.game_subtitle;
+      startBtn.textContent = config.start_button_text || defaultConfig.start_button_text;
+      checkBtn.textContent = config.check_button_text || defaultConfig.check_button_text;
+      passBtn.textContent = config.pass_button_text || defaultConfig.pass_button_text;
+      restartBtn.textContent = config.restart_button_text || defaultConfig.restart_button_text;
+
+      document.getElementById("title").style.fontSize = `${baseSize * 2.35}px`;
+      document.getElementById("subtitle").style.fontSize = `${baseSize * 0.82}px`;
+      document.getElementById("introTitle").style.fontSize = `${baseSize * 1.55}px`;
+      document.getElementById("introText").style.fontSize = `${baseSize}px`;
+      document.getElementById("letterTitle").style.fontSize = `${baseSize * 1.65}px`;
+      document.getElementById("clueText").style.fontSize = `${baseSize * 1.28}px`;
+      answerInput.style.fontSize = `${baseSize * 1.05}px`;
+      feedback.style.fontSize = `${baseSize * 0.98}px`;
+      document.querySelector("footer").style.fontSize = `${baseSize * 0.86}px`;
+
+      document.querySelectorAll(".rounded-\\[2rem\\], .bg-white\\/90").forEach(el => {
+        el.style.backgroundColor = surfaceColor;
+      });
+
+      document.querySelectorAll("h1, h2, label, #scoreText, #pendingText").forEach(el => {
+        el.style.color = textColor;
+      });
+
+      startBtn.style.backgroundColor = primaryActionColor;
+      checkBtn.style.backgroundColor = primaryActionColor;
+      restartBtn.style.backgroundColor = primaryActionColor;
+      passBtn.style.backgroundColor = secondaryActionColor;
+      document.getElementById("currentLetterBadge").style.backgroundColor = primaryActionColor;
+
+      document.querySelectorAll(".letter-bubble.pending").forEach(el => {
+        el.style.backgroundColor = primaryActionColor;
+      });
+    }
+
+    function initElementSdk() {
+      if (!window.elementSdk) {
+        applyConfig(defaultConfig);
+        return;
+      }
+
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange: async (config) => {
+          applyConfig(config);
+        },
+        mapToCapabilities: (config) => ({
+          recolorables: [
+            {
+              get: () => config.background_color || defaultConfig.background_color,
+              set: (value) => {
+                config.background_color = value;
+                window.elementSdk.setConfig({ background_color: value });
+              }
+            },
+            {
+              get: () => config.surface_color || defaultConfig.surface_color,
+              set: (value) => {
+                config.surface_color = value;
+                window.elementSdk.setConfig({ surface_color: value });
+              }
+            },
+            {
+              get: () => config.text_color || defaultConfig.text_color,
+              set: (value) => {
+                config.text_color = value;
+                window.elementSdk.setConfig({ text_color: value });
+              }
+            },
+            {
+              get: () => config.primary_action_color || defaultConfig.primary_action_color,
+              set: (value) => {
+                config.primary_action_color = value;
+                window.elementSdk.setConfig({ primary_action_color: value });
+              }
+            },
+            {
+              get: () => config.secondary_action_color || defaultConfig.secondary_action_color,
+              set: (value) => {
+                config.secondary_action_color = value;
+                window.elementSdk.setConfig({ secondary_action_color: value });
+              }
+            }
+          ],
+          borderables: [],
+          fontEditable: {
+            get: () => config.font_family || defaultConfig.font_family,
+            set: (value) => {
+              config.font_family = value;
+              window.elementSdk.setConfig({ font_family: value });
+            }
+          },
+          fontSizeable: {
+            get: () => config.font_size || defaultConfig.font_size,
+            set: (value) => {
+              config.font_size = value;
+              window.elementSdk.setConfig({ font_size: value });
+            }
+          }
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ["game_title", config.game_title || defaultConfig.game_title],
+          ["game_subtitle", config.game_subtitle || defaultConfig.game_subtitle],
+          ["start_button_text", config.start_button_text || defaultConfig.start_button_text],
+          ["check_button_text", config.check_button_text || defaultConfig.check_button_text],
+          ["pass_button_text", config.pass_button_text || defaultConfig.pass_button_text],
+          ["restart_button_text", config.restart_button_text || defaultConfig.restart_button_text]
+        ])
+      });
+    }
+
+    createRosco();
+    updateRosco();
+    updateStats();
+    initElementSdk();
+
+    startBtn.addEventListener("click", startGame);
+    restartBtn.addEventListener("click", startGame);
+    answerForm.addEventListener("submit", checkAnswer);
+    passBtn.addEventListener("click", passQuestion);
+
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ffa1d32e97cd092',t:'MTc3OTQzNTAxMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
